@@ -2,9 +2,33 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
-#include <stdbool.h>
 
 #include "nini.h"
+
+typedef enum {
+    NINI_INT,
+    NINI_FLOAT,
+    NINI_STR,
+    NINI_BOOL
+} Nini_Type;
+
+typedef struct {
+    char *section;
+    char *key;
+    Nini_Type type;
+    union {
+        long i;
+        double f;
+        bool b;
+        char *s;
+    } v;
+} Nini_Entry;
+
+struct Nini_Config {
+    Nini_Entry *data;
+    size_t len;
+    size_t cap;
+};
 
 static char *xstrdup(const char *s)
 {
@@ -42,7 +66,7 @@ static bool is_float(const char *s)
     return *e == 0;
 }
 
-static int is_bool(const char *s)
+static bool is_bool(const char *s)
 {
     return (!strcmp(s, "true")  ||
             !strcmp(s, "false") ||
@@ -64,7 +88,7 @@ static char *unquote(const char *s)
     return xstrdup(s);
 }
 
-static void push(Nini_Config *c, Nini_Entry e)
+static void push(Nini *c, Nini_Entry e)
 {
     if (c->len == c->cap) {
         c->cap = c->cap ? c->cap * 2 : 16;
@@ -75,7 +99,7 @@ static void push(Nini_Config *c, Nini_Entry e)
 
 static char current_section[64];
 
-static void parse_line(Nini_Config *cfg, char *line)
+static void parse_line(Nini *cfg, char *line)
 {
     line = trim(line);
 
@@ -87,8 +111,8 @@ static void parse_line(Nini_Config *cfg, char *line)
         if (!end) return;
 
         *end = 0;
-        strncpy(current_section, line + 1, sizeof(current_section)-1);
-        current_section[sizeof(current_section)-1] = 0;
+        strncpy(current_section, line + 1, sizeof(current_section) - 1);
+        current_section[sizeof(current_section) - 1] = 0;
         return;
     }
 
@@ -107,10 +131,10 @@ static void parse_line(Nini_Config *cfg, char *line)
     if (is_bool(val)) {
         e.type = NINI_BOOL;
 
-        if (!strcmp(val, "true") || !strcmp(val, "1") || !strcmp(val, "yes"))
-            e.v.i = 1;
+        if (!strcmp(val, "true") || !strcmp(val, "yes"))
+            e.v.b = true;
         else
-            e.v.i = 0;
+            e.v.b = false;
     } else if (is_int(val)) {
         e.type = NINI_INT;
         e.v.i = strtol(val, NULL, 10);
@@ -120,17 +144,31 @@ static void parse_line(Nini_Config *cfg, char *line)
         e.v.f = strtod(val, NULL);
     }
     else {
-        e.type = NINI_STRING;
+        e.type = NINI_STR;
         e.v.s = unquote(val);
     }
 
     push(cfg, e);
 }
 
-bool load_ini(const char *path, Nini_Config *cfg)
+static Nini_Entry *get(Nini *cfg, const char *section, const char *key)
 {
+    for (size_t i = 0; i < cfg->len; i++) {
+        if (strcmp(cfg->data[i].key, key) == 0 &&
+            strcmp(cfg->data[i].section, section) == 0)
+            return &cfg->data[i];
+    }
+
+    return NULL;
+}
+
+Nini *nini_load(const char *path)
+{
+    Nini *cfg = calloc(1, sizeof(*cfg));
+    if (!cfg) return NULL;
+
     FILE *f = fopen(path, "r");
-    if (!f) return false;
+    if (!f) return NULL;
 
     char line[512];
     current_section[0] = 0;
@@ -140,15 +178,76 @@ bool load_ini(const char *path, Nini_Config *cfg)
     }
 
     fclose(f);
-    return true;
+    return cfg;
 }
 
-Nini_Entry *get(Nini_Config *cfg, const char *section, const char *key)
+void nini_free(Nini *cfg)
 {
-    for (size_t i = 0; i < cfg->len; i++) {
-        if (strcmp(cfg->data[i].key, key) == 0 &&
-            strcmp(cfg->data[i].section, section) == 0)
-            return &cfg->data[i];
-    }
-    return NULL;
+    free(cfg->data);
+    free(cfg);
 }
+
+const char *nini_error(int error)
+{
+    switch (error) {
+    case NINI_OK:
+        return "OK";
+        break;
+    case NINI_NOT_FOUND:
+        return "NOT FOUND";
+        break;
+    case NINI_TYPE_MISMATCH:
+        return "TYPE MISMATCH";
+        break;
+    default:
+        return "UNKNOWN ERROR";
+    }
+}
+
+#define NINI_FAIL(x) do { if (ok) *ok = (x); return 0; } while (0)
+
+long nini_get_int(Nini *cfg, const char *section, const char *key, int *ok)
+{
+    Nini_Entry *e = get(cfg, section, key);
+
+    if (!e) NINI_FAIL(NINI_NOT_FOUND);
+    if (e->type != NINI_INT) NINI_FAIL(NINI_TYPE_MISMATCH);
+
+    if (ok) *ok = NINI_OK;
+    return e->v.i;
+}
+
+double nini_get_float(Nini *cfg, const char *section, const char *key, int *ok)
+{
+    Nini_Entry *e = get(cfg, section, key);
+
+    if (!e) NINI_FAIL(NINI_NOT_FOUND);
+    if (e->type != NINI_FLOAT) NINI_FAIL(NINI_TYPE_MISMATCH);
+
+    if (ok) *ok = NINI_OK;
+    return e->v.f;
+}
+
+bool nini_get_bool(Nini *cfg, const char *section, const char *key, int *ok)
+{
+    Nini_Entry *e = get(cfg, section, key);
+
+    if (!e) NINI_FAIL(NINI_NOT_FOUND);
+    if (e->type != NINI_BOOL) NINI_FAIL(NINI_TYPE_MISMATCH);
+
+    if (ok) *ok = NINI_OK;
+    return e->v.b;
+}
+
+char *nini_get_str(Nini *cfg, const char *section, const char *key, int *ok)
+{
+    Nini_Entry *e = get(cfg, section, key);
+
+    if (!e) NINI_FAIL(NINI_NOT_FOUND);
+    if (e->type != NINI_STR) NINI_FAIL(NINI_TYPE_MISMATCH);
+
+    if (ok) *ok = NINI_OK;
+    return e->v.s;
+}
+
+#undef NINI_FAIL
