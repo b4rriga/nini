@@ -4,8 +4,6 @@ Minimal INI-style configuration parser in C11. Static library. No dependencies. 
 
 Named after the spanish term for NEET.
 
----
-
 ## Features
 
 - `key=value` parsing
@@ -15,8 +13,6 @@ Named after the spanish term for NEET.
 - Comment support (#, ;)
 - Single-pass parser
 - Deterministic behavior
-
----
 
 ## Installation
 
@@ -29,8 +25,6 @@ make
 ```sh
 sudo make install
 ```
-
----
 
 ## Types
 
