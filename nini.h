@@ -16,9 +16,9 @@ void nini_free(Nini *cfg);
 
 const char *nini_error(int error);
 
-long   nini_get_int(Nini *cfg, const char *section, const char *key, int *ok);
-double nini_get_float(Nini *cfg, const char *section, const char *key, int *ok);
-bool   nini_get_bool(Nini *cfg, const char *section, const char *key, int *ok);
-char  *nini_get_str(Nini *cfg, const char *section, const char *key, int *ok);
+long   nini_get_int(Nini *cfg, const char *section, const char *key, int *err);
+double nini_get_float(Nini *cfg, const char *section, const char *key, int *err);
+bool   nini_get_bool(Nini *cfg, const char *section, const char *key, int *err);
+char  *nini_get_str(Nini *cfg, const char *section, const char *key, int *err);
 
 #endif // NINI_H

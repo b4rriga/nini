@@ -204,49 +204,49 @@ const char *nini_error(int error)
     }
 }
 
-#define NINI_FAIL(x) do { if (ok) *ok = (x); return 0; } while (0)
+#define NINI_FAIL(x) do { if (err) *err = (x); return 0; } while (0)
 
-long nini_get_int(Nini *cfg, const char *section, const char *key, int *ok)
+long nini_get_int(Nini *cfg, const char *section, const char *key, int *err)
 {
     Nini_Entry *e = get(cfg, section, key);
 
     if (!e) NINI_FAIL(NINI_NOT_FOUND);
     if (e->type != NINI_INT) NINI_FAIL(NINI_TYPE_MISMATCH);
 
-    if (ok) *ok = NINI_OK;
+    if (err) *err = NINI_OK;
     return e->v.i;
 }
 
-double nini_get_float(Nini *cfg, const char *section, const char *key, int *ok)
+double nini_get_float(Nini *cfg, const char *section, const char *key, int *err)
 {
     Nini_Entry *e = get(cfg, section, key);
 
     if (!e) NINI_FAIL(NINI_NOT_FOUND);
     if (e->type != NINI_FLOAT) NINI_FAIL(NINI_TYPE_MISMATCH);
 
-    if (ok) *ok = NINI_OK;
+    if (err) *err = NINI_OK;
     return e->v.f;
 }
 
-bool nini_get_bool(Nini *cfg, const char *section, const char *key, int *ok)
+bool nini_get_bool(Nini *cfg, const char *section, const char *key, int *err)
 {
     Nini_Entry *e = get(cfg, section, key);
 
     if (!e) NINI_FAIL(NINI_NOT_FOUND);
     if (e->type != NINI_BOOL) NINI_FAIL(NINI_TYPE_MISMATCH);
 
-    if (ok) *ok = NINI_OK;
+    if (err) *err = NINI_OK;
     return e->v.b;
 }
 
-char *nini_get_str(Nini *cfg, const char *section, const char *key, int *ok)
+char *nini_get_str(Nini *cfg, const char *section, const char *key, int *err)
 {
     Nini_Entry *e = get(cfg, section, key);
 
     if (!e) NINI_FAIL(NINI_NOT_FOUND);
     if (e->type != NINI_STR) NINI_FAIL(NINI_TYPE_MISMATCH);
 
-    if (ok) *ok = NINI_OK;
+    if (err) *err = NINI_OK;
     return e->v.s;
 }
 
