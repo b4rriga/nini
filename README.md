@@ -39,9 +39,9 @@ int main(void)
     Nini *cfg = nini_load("config.ini");
     if (!cfg) return 1;
 
-    int ok;
-    printf("integer = %ld\n", nini_get_int(cfg, "numbers", "integer", &ok));
-    printf("exit code: %s\n", nini_error(ok));
+    int err;
+    printf("integer = %ld\n", nini_get_int(cfg, "numbers", "integer", &err));
+    printf("exit code: %s\n", nini_error(err));
 
     nini_free(cfg);
     return 0;
