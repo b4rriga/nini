@@ -2,15 +2,15 @@
 
 Minimal INI-style configuration parser in C11. Static library. No dependencies. No runtime magic.
 
-Named after the spanish term for NEET.
+Named after the Spanish term for NEET.
 
 ## Features
 
 - `key=value` parsing
-- Optional [section] support
+- Optional `[section]` support
 - Integer, float, string, boolean inference
 - Whitespace trimming
-- Comment support (#, ;)
+- Comment support (`#`, `;`)
 - Single-pass parser
 - Deterministic behavior
 
@@ -28,10 +28,10 @@ sudo make install
 
 ## Types
 
-- `int`: 123
-- `float`: 12.34
-- `bool`: true / false / yes / no
-- `string`: "text" or raw text
+- Integer: `123`
+- Float: `12.34`
+- String: `"text"` or `raw text`
+- Boolean: `true`, `false`, `yes`, `no`
 
 ## Design
 
