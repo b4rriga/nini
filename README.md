@@ -37,6 +37,7 @@ If an integer value must be retrieved by key from an INI file `config.ini`, the 
 int main(void)
 {
     Nini *cfg = nini_load("config.ini");
+    if (!cfg) return 1;
 
     int ok;
     printf("integer = %ld\n", nini_get_int(cfg, "numbers", "integer", &ok));
