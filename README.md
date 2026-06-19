@@ -16,14 +16,19 @@ Named after the Spanish term for NEET.
 
 ## Installation
 
-#### Build
+### Build
 ```sh
 make
 ```
 
-#### Install
+### Install
 ```sh
 sudo make install
+```
+
+### Linking
+```sh
+cc main.c -lnini
 ```
 
 ## Usage
