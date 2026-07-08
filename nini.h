@@ -23,7 +23,7 @@
 enum {
     NINI_OK,
     NINI_NOT_FOUND,
-    NINI_TYPE_MISMATCH
+    NINI_BAD_CONVERSION
 };
 
 typedef struct Nini_Config Nini;

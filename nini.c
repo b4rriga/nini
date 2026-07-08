@@ -22,21 +22,21 @@
 
 #include "nini.h"
 
-typedef enum {
-    NINI_INT,
-    NINI_FLOAT,
-    NINI_STR,
-    NINI_BOOL
-} Nini_Type;
+#define NINI_INT   (1u << 0)
+#define NINI_FLOAT (1u << 1)
+#define NINI_BOOL  (1u << 2)
+#define NINI_STR   0
+
+static char section[256];
 
 typedef struct {
-    union {
+    struct {
         long i;
         double f;
         bool b;
         char *s;
-    } v;
-    Nini_Type type;
+    } value;
+    uint8_t types;
     char *key;
 } Nini_Entry;
 
@@ -77,45 +77,11 @@ static char *trim(char *s)
 
     char *end = s + strlen(s);
     while (end > s && (
-           end[-1] == ' ' || end[-1] == '\t' ||
+           end[-1] == ' '  || end[-1] == '\t' ||
            end[-1] == '\n' || end[-1] == '\r'))
         *--end = 0;
 
     return s;
-}
-
-static bool is_int(const char *s)
-{
-    if (!*s) return false;
-
-    char *e;
-
-    if (s[0] == '0' && (s[1] == 'b' || s[1] == 'B')) {
-        strtol(s + 2, &e, 2);
-        return *e == 0;
-    }
-
-    strtol(s, &e, 0);
-    return *e == 0;
-}
-
-static bool is_float(const char *s)
-{
-    if (!strchr(s, '.')) return false;
-    char *e;
-    strtod(s, &e);
-    return *e == 0;
-}
-
-// TODO: support 0 and 1
-static bool is_bool(const char *s)
-{
-    return (stricmp(s, "true")  ||
-            stricmp(s, "false") ||
-            stricmp(s, "on")    ||
-            stricmp(s, "off")   ||
-            stricmp(s, "yes")   ||
-            stricmp(s, "no"));
 }
 
 static char *unquote(const char *s)
@@ -130,6 +96,95 @@ static char *unquote(const char *s)
     }
 
     return xstrdup(s);
+}
+
+// TODO: accept #AABBCC and #AABBCCDD as number for use as color
+static bool is_int(const char *s)
+{
+    if (!*s) return false;
+    char *e;
+
+    if (s[0] == '0' && (s[1] == 'b' || s[1] == 'B')) {
+        strtol(s + 2, &e, 2);
+        if (*e == 0) return true;
+    } else {
+        strtol(s, &e, 0);
+        if (*e == 0) return true;
+    }
+
+    double d  = strtod(s, &e);
+    if (*e != 0) return false;
+
+    return d == (double)(long)d;
+}
+
+// TODO: support cientific notation
+static bool is_float(const char *s)
+{
+    if (!*s) return false;
+    char *e;
+
+    if (strchr(s, '.')) {
+        strtod(s, &e);
+        if (*e == 0) return true;
+    }
+
+    return is_int(s);
+}
+
+static bool is_bool(const char *s)
+{
+    if (stricmp(s, "true")  ||
+        stricmp(s, "false") ||
+        stricmp(s, "on")    ||
+        stricmp(s, "off")   ||
+        stricmp(s, "yes")   ||
+        stricmp(s, "no"))
+        return true;
+
+    char *e;
+    double d = strtod(s, &e);
+    if (*e != 0) return false;
+
+    return d == 0.0 || d == 1.0;
+}
+
+static void store_int(Nini_Entry *e, const char *val)
+{
+    e->types |= NINI_INT;
+
+    if (val[0] == '0' && (val[1] == 'b' || val[1] == 'B'))
+        e->value.i = strtol(val + 2, NULL, 2);
+    else
+        e->value.i = strtol(val, NULL, 0);
+}
+
+static void store_float(Nini_Entry *e, const char *val)
+{
+    e->types |= NINI_FLOAT;
+
+    e->value.f = strtod(val, NULL);
+}
+
+static void store_bool(Nini_Entry *e, const char *val)
+{
+    e->types |= NINI_BOOL;
+
+    if (stricmp(val, "true") ||
+        stricmp(val, "on")   ||
+        stricmp(val, "yes")) {
+        e->value.b = true;
+        return;
+    }
+
+    if (stricmp(val, "false") ||
+        stricmp(val, "off")   ||
+        stricmp(val, "no")) {
+        e->value.b = false;
+        return;
+    }
+
+    e->value.b = (strtod(val, NULL) == 1.0);
 }
 
 static Nini_Entry *get(Nini *cfg, const char *key)
@@ -147,8 +202,7 @@ static void push(Nini *cfg, Nini_Entry e)
 
     if (old) {
         free(old->key);
-        if (old->type == NINI_STR)
-            free(old->v.s);
+        free(old->value.s);
 
         *old = e;
         return;
@@ -161,8 +215,6 @@ static void push(Nini *cfg, Nini_Entry e)
 
     cfg->data[cfg->len++] = e;
 }
-
-static char section[256];
 
 static void parse_line(Nini *cfg, char *line)
 {
@@ -188,7 +240,8 @@ static void parse_line(Nini *cfg, char *line)
     char *key = trim(line);
     char *val = trim(eq + 1);
 
-    Nini_Entry e;
+    Nini_Entry e = {0};
+
     if (*section == '\0')
         e.key = xstrdup(key);
     else {
@@ -197,32 +250,10 @@ static void parse_line(Nini *cfg, char *line)
         snprintf(e.key, len, "%s.%s", section, key);
     }
 
-    // TODO: support multiple representation of the same value
-    if (is_bool(val)) {
-        e.type = NINI_BOOL;
-
-        if (stricmp(val, "true") ||
-            stricmp(val, "on")   ||
-            stricmp(val, "yes"))
-            e.v.b = true;
-        else
-            e.v.b = false;
-    }
-    else if (is_int(val)) {
-        e.type = NINI_INT;
-        if (val[0] == '0' && (val[1] == 'b' || val[1] == 'B'))
-            e.v.i = strtol(val + 2, NULL, 2);
-        else
-            e.v.i = strtol(val, NULL, 0);
-    }
-    else if (is_float(val)) {
-        e.type = NINI_FLOAT;
-        e.v.f = strtod(val, NULL);
-    }
-    else {
-        e.type = NINI_STR;
-        e.v.s = unquote(val);
-    }
+    if (is_int(val))   store_int(&e, val);
+    if (is_float(val)) store_float(&e, val);
+    if (is_bool(val))  store_bool(&e, val);
+    e.value.s = unquote(val);
 
     push(cfg, e);
 }
@@ -248,23 +279,22 @@ Nini *nini_load(const char *path)
 void nini_dump(Nini *cfg)
 {
     for (int i = 0; i < cfg->len; i++) {
-        const Nini_Entry entry = cfg->data[i];
-        printf("%s = ", entry.key);
+        const Nini_Entry e = cfg->data[i];
+        fprintf(stderr, "%s\n", e.key);
 
-        switch (entry.type) {
-        case NINI_INT:
-            printf("%ld\n", entry.v.i);
-            break;
-        case NINI_FLOAT:
-            printf("%lf\n", entry.v.f);
-            break;
-        case NINI_BOOL:
-            printf("%s\n", entry.v.b ? "true" : "false");
-            break;
-        case NINI_STR:
-            printf("\"%s\"\n", entry.v.s);
-            break;
+        if (e.types & NINI_INT)
+            fprintf(stderr, "├── as int    : %ld\n", e.value.i);
+        if (e.types & NINI_FLOAT) {
+            fprintf(stderr, "├── as float  : %g", e.value.f);
+
+            if (e.types & NINI_INT)
+                fprintf(stderr, ".0");
+            fprintf(stderr, "\n");
         }
+        if (e.types & NINI_BOOL)
+            fprintf(stderr, "├── as bool   : %s\n", e.value.b ? "true" : "false");
+
+        fprintf(stderr, "└── as string : \"%s\"\n", e.value.s);
     }
 }
 
@@ -277,57 +307,56 @@ void nini_free(Nini *cfg)
 const char *nini_error(int error)
 {
     switch (error) {
-    case NINI_OK:            return "OK";
-    case NINI_NOT_FOUND:     return "NOT FOUND";
-    case NINI_TYPE_MISMATCH: return "TYPE MISMATCH";
-    default:                 return "UNKNOWN ERROR";
+    case NINI_OK:             return "OPERATION OK";
+    case NINI_NOT_FOUND:      return "KEY NOT FOUND";
+    case NINI_BAD_CONVERSION: return "CONVERSION NOT POSSIBLE";
+    default:                  return "UNKNOWN ERROR";
     }
 }
 
 #define NINI_FAIL(x) do { if (err) *err = (x); return 0; } while (0)
 
-long nini_get_int(Nini *cfg, const char *key, int *err)
+static Nini_Entry *get_as(Nini *cfg, const char *key, uint8_t type, int *err)
 {
     Nini_Entry *e = get(cfg, key);
 
-    if (!e) NINI_FAIL(NINI_NOT_FOUND);
-    if (e->type != NINI_INT) NINI_FAIL(NINI_TYPE_MISMATCH);
+    if (!e) {
+        if (err) *err = NINI_NOT_FOUND;
+        return NULL;
+    }
+
+    if (!(e->types & type)) {
+        if (err) *err = NINI_BAD_CONVERSION;
+        return NULL;
+    }
 
     if (err) *err = NINI_OK;
-    return e->v.i;
+
+    return e;
+}
+
+long nini_get_int(Nini *cfg, const char *key, int *err)
+{
+    Nini_Entry *e = get_as(cfg, key, NINI_INT, err);
+    return e ? e->value.i : 0;
 }
 
 double nini_get_float(Nini *cfg, const char *key, int *err)
 {
-    Nini_Entry *e = get(cfg, key);
-
-    if (!e) NINI_FAIL(NINI_NOT_FOUND);
-    if (e->type != NINI_FLOAT) NINI_FAIL(NINI_TYPE_MISMATCH);
-
-    if (err) *err = NINI_OK;
-    return e->v.f;
+    Nini_Entry *e = get_as(cfg, key, NINI_FLOAT, err);
+    return e ? e->value.f : 0.0;
 }
 
 bool nini_get_bool(Nini *cfg, const char *key, int *err)
 {
-    Nini_Entry *e = get(cfg, key);
-
-    if (!e) NINI_FAIL(NINI_NOT_FOUND);
-    if (e->type != NINI_BOOL) NINI_FAIL(NINI_TYPE_MISMATCH);
-
-    if (err) *err = NINI_OK;
-    return e->v.b;
+    Nini_Entry *e = get_as(cfg, key, NINI_BOOL, err);
+    return e ? e->value.b : false;
 }
 
 char *nini_get_str(Nini *cfg, const char *key, int *err)
 {
-    Nini_Entry *e = get(cfg, key);
-
-    if (!e) NINI_FAIL(NINI_NOT_FOUND);
-    if (e->type != NINI_STR) NINI_FAIL(NINI_TYPE_MISMATCH);
-
-    if (err) *err = NINI_OK;
-    return e->v.s;
+    Nini_Entry *e = get_as(cfg, key, NINI_STR, err);
+    return e ? e->value.s : NULL;
 }
 
 #undef NINI_FAIL
