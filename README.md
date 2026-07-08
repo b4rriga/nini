@@ -76,7 +76,7 @@ float = 2.71828
 
 [misc]
 bool = false
-bool2 = yes
+bool2 = 1.000
 
 []
 string = howdy
@@ -85,11 +85,23 @@ string = howdy
 Using `nini_dump()` to print the parsed configuration yields the following output. It also illustrates that later assignments override earlier ones.
 
 ```text
-numbers.integer = 1337
-numbers.float = 2.718280
-misc.bool = false
-misc.bool2 = true
-string = "howdy"
+numbers.integer
+├── as int    : 1337
+├── as float  : 1337.0
+└── as string : "1337"
+numbers.float
+├── as float  : 2.71828
+└── as string : "2.71828"
+misc.bool
+├── as bool   : false
+└── as string : "false"
+misc.bool2
+├── as int    : 1
+├── as float  : 1.0
+├── as bool   : true
+└── as string : "1.000"
+string
+└── as string : "howdy"
 ```
 
 In this example, `string` is defined at the root level, meaning it does not belong to any section. With the `section.key` syntax, root-level keys are written without a section prefix. With the `[section]` syntax, they can be defined either before the first section is opened or after resetting the current section with `[]`, which returns the parser to the root level.
