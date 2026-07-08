@@ -45,8 +45,8 @@ int main(void)
     if (!cfg) return 1;
 
     int err;
-    printf("integer = %ld\n", nini_get_int(cfg, "numbers.integer", &err));
-    printf("[status: %s]\n", nini_error(err));
+    printf("integer = %ld", nini_get_int(cfg, "numbers.integer", &err));
+    printf(" [status: %s]\n", nini_error(err));
 
     nini_free(cfg);
     return 0;
