@@ -66,12 +66,18 @@ static char *trim(char *s)
     return s;
 }
 
-// TODO: support binary, octal and hexadecimal
 static bool is_int(const char *s)
 {
     if (!*s) return false;
+
     char *e;
-    strtol(s, &e, 10);
+
+    if (s[0] == '0' && (s[1] == 'b' || s[1] == 'B')) {
+        strtol(s + 2, &e, 2);
+        return *e == 0;
+    }
+
+    strtol(s, &e, 0);
     return *e == 0;
 }
 
@@ -180,9 +186,13 @@ static void parse_line(Nini *cfg, char *line)
             e.v.b = true;
         else
             e.v.b = false;
-    } else if (is_int(val)) {
+    }
+    else if (is_int(val)) {
         e.type = NINI_INT;
-        e.v.i = strtol(val, NULL, 10);
+        if (val[0] == '0' && (val[1] == 'b' || val[1] == 'B'))
+            e.v.i = strtol(val + 2, NULL, 2);
+        else
+            e.v.i = strtol(val, NULL, 0);
     }
     else if (is_float(val)) {
         e.type = NINI_FLOAT;

@@ -96,7 +96,7 @@ In this example, `string` is defined at the root level, meaning it does not belo
 
 ## Types
 
-- Integer: `123`
+- Integer: `10`, `0b1010`, `012`, `0xA` (all evaluate to decimal `10`; hexadecimal digits and base prefixes are case-insensitive)
 - Float: `12.34`
 - String: `"text"` or `raw text`
 - Boolean: `true`, `false`, `yes`, `no`
