@@ -53,6 +53,24 @@ static char *xstrdup(const char *s)
     return p;
 }
 
+static bool stricmp(const char *a, const char *b)
+{
+    while (*a && *b) {
+        char ca = *a++;
+        char cb = *b++;
+
+        if ('A' <= ca && ca <= 'Z')
+            ca |= 0x20;
+        if ('A' <= cb && cb <= 'Z')
+            cb |= 0x20;
+
+        if (ca != cb)
+            return false;
+    }
+
+    return *a == *b;
+}
+
 static char *trim(char *s)
 {
     while (*s == ' ' || *s == '\t') s++;
@@ -89,14 +107,15 @@ static bool is_float(const char *s)
     return *e == 0;
 }
 
-// TODO: support (-inf, 0] as false and [1, inf) as true
-// TODO: be case-insensitive
+// TODO: support 0 and 1
 static bool is_bool(const char *s)
 {
-    return (!strcmp(s, "true")  ||
-            !strcmp(s, "false") ||
-            !strcmp(s, "yes")   ||
-            !strcmp(s, "no"));
+    return (stricmp(s, "true")  ||
+            stricmp(s, "false") ||
+            stricmp(s, "on")    ||
+            stricmp(s, "off")   ||
+            stricmp(s, "yes")   ||
+            stricmp(s, "no"));
 }
 
 static char *unquote(const char *s)
@@ -182,7 +201,9 @@ static void parse_line(Nini *cfg, char *line)
     if (is_bool(val)) {
         e.type = NINI_BOOL;
 
-        if (!strcmp(val, "true") || !strcmp(val, "yes"))
+        if (stricmp(val, "true") ||
+            stricmp(val, "on")   ||
+            stricmp(val, "yes"))
             e.v.b = true;
         else
             e.v.b = false;

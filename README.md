@@ -96,10 +96,14 @@ In this example, `string` is defined at the root level, meaning it does not belo
 
 ## Types
 
-- Integer: `10`, `0b1010`, `012`, `0xA` (all evaluate to decimal `10`; hexadecimal digits and base prefixes are case-insensitive)
-- Float: `12.34`
-- String: `"text"` or `raw text`
-- Boolean: `true`, `false`, `yes`, `no`
+- **Integer**: `10`, `0b1010`, `012`, `0xA` (all evaluate to decimal `10`)
+- **Float**: `12.34`
+- **String**: `"text"` or `raw text`
+- **Boolean**: `true`, `false`, `on`, `off`, `yes`, `no`
+
+Hexadecimal digits, integer base prefixes and boolean literals are all case-insensitive.
+
+If double quotes are intended to be part of the string, enclose the entire value in an additional pair of double quotes. The outer quotes are stripped during parsing, leaving the inner quotes as part of the string.
 
 ## Design
 
