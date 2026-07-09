@@ -2,7 +2,7 @@
 
 Minimal INI configuration parser for C11.
 
-Nini parses INI files and stores their contents using the ![`value`](https://github.com/b4rriga/b4se#value) module from ![`b4se`](https://github.com/b4rriga/b4se), providing automatic type recognition and conversion while exposing a simple API for configuration retrieval.
+Nini parses INI files and stores their contents using the [`value`](https://github.com/b4rriga/b4se#value) module from [`b4se`](https://github.com/b4rriga/b4se), providing automatic type recognition and conversion while exposing a simple API for configuration retrieval.
 
 Named after the Spanish term for NEET.
 
