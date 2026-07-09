@@ -1,6 +1,8 @@
 # Nini
 
-Minimal INI-style configuration parser in C11. Static library. No dependencies. No runtime magic.
+Minimal INI configuration parser for C11.
+
+Nini parses INI files and stores their contents using the ![`value`](https://github.com/b4rriga/b4se#value) module from ![`b4se`](https://github.com/b4rriga/b4se), providing automatic type recognition and conversion while exposing a simple API for configuration retrieval.
 
 Named after the Spanish term for NEET.
 
@@ -28,7 +30,7 @@ sudo make install
 
 ### Linking
 ```sh
-cc main.c -lnini
+cc main.c -lnini -lb4se
 ```
 
 ## Usage
@@ -44,7 +46,7 @@ int main(void)
     Nini *cfg = nini_load("config.ini");
     if (!cfg) return 1;
 
-    int err;
+    NiniStatus err;
     printf("integer = %ld", nini_get_int(cfg, "numbers.integer", &err));
     printf(" [status: %s]\n", nini_error(err));
 
@@ -53,7 +55,7 @@ int main(void)
 }
 ```
 
-... getting the following output:
+getting the following output:
 
 ```text
 integer = 42 [status: OPERATION OK]
@@ -61,7 +63,7 @@ integer = 42 [status: OPERATION OK]
 
 Several INI files may be loaded simultaneously as each call to `nini_load()` returns a pointer to an opaque structure `Nini`.
 
-In the example, a status integer (`ok`) is passed by reference, allowing the function to store the result state. This variable can be later rendered as human-readable string using `nini_error()`. This argument may be omitted by passing `NULL` in its place.
+In the example, a `NiniStatus err` is passed by reference, allowing the function to store the result state. This variable can be later rendered as human-readable string using `nini_error()`. This argument may be omitted by passing `NULL` in its place.
 
 The numeric literal `42` is not limited to an integer representation. Since it is exactly representable as a floating-point value, Nini also allows it to be retrieved as a `double`. Likewise, the original textual representation can always be retrieved as a string. Nevertheless, given the library's design principles, it is safe to assume that any number that is not `0` or `1` (and by extension, `0.0` or `1.0`) will not be a valid boolean, thus the following output:
 
@@ -71,10 +73,9 @@ integer        =         42 [status: OPERATION OK]
 (bool)integer  =      false [status: CONVERSION NOT POSSIBLE]
 ```
 
-... which results from the following tweak to the example entry point:
+which results from the following tweak to the example entry point:
 
 ```c
-int err;
 printf("integer        = %10ld", nini_get_int(cfg, "numbers.integer", &err));
 printf(" [status: %s]\n", nini_error(err));
 printf("(float)integer = %10lf", nini_get_float(cfg, "numbers.integer", &err));
@@ -151,7 +152,7 @@ In this example, `string` is defined at the root level, meaning it does not belo
 - **Integer**: `10`, `0b1010`, `012`, `0xA` (all evaluate to decimal `10`)
 - **Float**: `12.34`
 - **String**: `"text"` or `raw text`
-- **Boolean**: `true`, `false`, `on`, `off`, `yes`, `no`
+- **Boolean**: `true`, `false`, `on`, `off`, `yes`, `no`, `0`, `0.0`, `1`, `1.0`
 
 Hexadecimal digits, integer base prefixes and boolean literals are all case-insensitive.
 
@@ -159,9 +160,9 @@ If double quotes are intended to be part of the string, enclose the entire value
 
 ## Design
 
-- C11 strict
-- No POSIX extensions required
+- ISO C11
+- No POSIX extensions
 - No dynamic runtime dependencies
-- No configuration framework overhead
-- Intended for small UNIX tools and embedded systems
-
+- Static library
+- Small and portable
+- Suitable for UNIX tools, embedded systems and freestanding projects with a C11 runtime
