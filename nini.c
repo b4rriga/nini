@@ -58,7 +58,7 @@ static void parse_line(Nini *cfg, char *line)
         if (!fullkey) return;
 
         snprintf(fullkey, len, "%s.%s", section, key);
-        b4_value_store(cfg, key, val);
+        b4_value_store(cfg, fullkey, val);
         free(fullkey);
     }
 }
