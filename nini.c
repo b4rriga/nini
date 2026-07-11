@@ -51,21 +51,21 @@ static void parse_line(Nini *cfg, char *line)
     char *val = trim(eq + 1);
 
     if (*section == '\0')
-        b4_value_store(cfg, key, val);
+        b4val_store(cfg, key, val);
     else {
         size_t len = strlen(section) + 1 + strlen(key) + 1;
         char *fullkey = malloc(len);
         if (!fullkey) return;
 
         snprintf(fullkey, len, "%s.%s", section, key);
-        b4_value_store(cfg, fullkey, val);
+        b4val_store(cfg, fullkey, val);
         free(fullkey);
     }
 }
 
 Nini *nini_load(const char *path)
 {
-    Nini *cfg = b4_value_new();
+    Nini *cfg = b4val_new();
     if (!cfg) return NULL;
 
     FILE *f = fopen(path, "r");
